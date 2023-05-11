@@ -28,7 +28,7 @@ export async function postGames(req, res){
         const createLog=await db.query(`
         INSERT INTO games (name, image, "stockTotal", "pricePerDay") 
         VALUES ($1, $2, $3, $4)`,[name, image, stockTotal, pricePerDay]);
-        res.sendStatus(201)
+        res.sendStatus(201);
     } catch (error) {
         console.error(error);
         res.sendStatus(500);
