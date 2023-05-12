@@ -28,7 +28,7 @@ export async function getRentals(req, res) {
             return e;
         })
         
-        return res.send(search.rows);
+        return res.send(result);
     } catch (error) {
         console.error(error);
         return res.sendStatus(500);
@@ -75,7 +75,7 @@ export async function postReturnRentals(req, res){
         const updLog=await db.query(`
         UPDATE rentals 
         SET "returnDate"=$1, "delayFee"=$2
-        WHERE id=$3`, [returned.toISOString(), fee, id]);
+        WHERE id=$3`, [returned.toISOString(), fee<0?0:fee, id]);
 
         return res.sendStatus(200);
     } catch (error) {
