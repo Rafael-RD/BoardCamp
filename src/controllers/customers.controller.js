@@ -13,7 +13,7 @@ import db from "../database/database.connection.js";
 export async function getCustomers(req, res) {
     try {
         const search=await db.query("SELECT * FROM customers");
-        return res.send(search.rows);
+        return res.send(search.rows.map(e=>({...e, birthday: e.birthday.toISOString().slice(0,10)})));
     } catch (error) {
         console.error(error);
         return res.sendStatus(500);
@@ -27,7 +27,7 @@ export async function getCustomersById(req, res){
     try {
         const search=await db.query("SELECT * FROM customers WHERE id=$1",[id]);
         if(search.rowCount===0) return res.sendStatus(404);
-        return res.send(search.rows[0]);
+        return res.send({...search.rows[0], birthday: search.rows[0].birthday.toISOString().slice(0,10)});
     } catch (error) {
         console.error(error);
         return res.sendStatus(500);
