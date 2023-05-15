@@ -72,7 +72,16 @@ export async function postReturnRentals(req, res) {
         if (search.rows[0].returnDate !== null) return res.sendStatus(400);
         const returnedDay = new Date();
         const rentedDay = new Date(search.rows[0].rentDate);
-        const fee = (returnedDay > (rentedDay + (milisInDay * search.rows[0].daysRented)) ? (returnedDay - (rentedDay + (daysRented * milisInDay)))/milisInDay * search.rows[0].pricePerDay : 0);
+        const daysRented=search.rows[0].daysRented;
+        const pricePerDay=search.rows[0].originalPrice/daysRented
+                
+        let fee;
+        if(returnedDay.getTime() > (rentedDay.getTime() + (milisInDay * search.rows[0].daysRented))){
+            const daysLate=Math.floor((returnedDay.getTime() - (rentedDay.getTime() + (daysRented * milisInDay)))/milisInDay)
+            fee=daysLate*pricePerDay;
+        }else{
+            fee=0
+        }
 
         const updLog = await db.query(`
         UPDATE rentals 
