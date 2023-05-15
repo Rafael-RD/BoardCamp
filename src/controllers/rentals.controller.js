@@ -1,4 +1,5 @@
 import db from "../database/database.connection.js";
+const milisInDay = (1000 * 3600 * 24);
 
 /*
 {
@@ -20,14 +21,14 @@ export async function getRentals(req, res) {
             FROM rentals
             JOIN customers ON rentals."customerId"=customers.id
             JOIN games ON rentals."gameId"=games.id`);
-        const result=search.rows?.map(e=>{
-            e.customer={id: e.customerId,name: e.customerName};
-            e.game={id: e.gameId,name: e.gameName};
+        const result = search.rows?.map(e => {
+            e.customer = { id: e.customerId, name: e.customerName };
+            e.game = { id: e.gameId, name: e.gameName };
             delete e.customerName;
             delete e.gameName;
             return e;
         })
-        
+
         return res.send(result);
     } catch (error) {
         console.error(error);
@@ -35,25 +36,25 @@ export async function getRentals(req, res) {
     }
 }
 
-export async function postRentals(req, res){
-    const {customerId, gameId, daysRented}=res.locals.validated;
+export async function postRentals(req, res) {
+    const { customerId, gameId, daysRented } = res.locals.validated;
 
     try {
-        const searchCustomer=await db.query("SELECT * FROM customers WHERE id=$1",[customerId]);
-        if(searchCustomer.rowCount===0) return res.sendStatus(400);
-        const searchGame=await db.query("SELECT * FROM games WHERE id=$1",[gameId]);
-        if(searchGame.rowCount===0) return res.sendStatus(400);
-        const searchRentals=await db.query(`SELECT * FROM rentals WHERE "gameId"=$1 AND "returnDate" IS NULL`,[gameId]);
-        if(searchGame.rows[0].stockTotal-searchRentals.rowCount<=0) return res.sendStatus(400);
-        if(searchRentals.rows.some(e=>e.customerId===customerId)) return res.sendStatus(400);
+        const searchCustomer = await db.query("SELECT * FROM customers WHERE id=$1", [customerId]);
+        if (searchCustomer.rowCount === 0) return res.sendStatus(400);
+        const searchGame = await db.query("SELECT * FROM games WHERE id=$1", [gameId]);
+        if (searchGame.rowCount === 0) return res.sendStatus(400);
+        const searchRentals = await db.query(`SELECT * FROM rentals WHERE "gameId"=$1 AND "returnDate" IS NULL`, [gameId]);
+        if (searchGame.rows[0].stockTotal - searchRentals.rowCount <= 0) return res.sendStatus(400);
+        if (searchRentals.rows.some(e => e.customerId === customerId)) return res.sendStatus(400);
 
-        
-        const createLog=await db.query(`
+
+        const createLog = await db.query(`
         INSERT INTO rentals 
         ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee")
-        VALUES ($1, $2, $3, $4, $5, $6, $7)`, 
-        [customerId, gameId, (new Date()).toISOString(), 
-        daysRented, null, daysRented*searchGame.rows[0].pricePerDay, null]);
+        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [customerId, gameId, (new Date()).toISOString(),
+                daysRented, null, daysRented * searchGame.rows[0].pricePerDay, null]);
 
         return res.sendStatus(201);
     } catch (error) {
@@ -62,20 +63,21 @@ export async function postRentals(req, res){
     }
 }
 
-export async function postReturnRentals(req, res){
-    const {id}=req.params;
-    if(id<=0) return res.sendStatus(404);
+export async function postReturnRentals(req, res) {
+    const { id } = req.params;
+    if (id <= 0) return res.sendStatus(404);
     try {
-        const search=await db.query("SELECT * FROM rentals WHERE id=$1", [id]);
-        if(search.rowCount===0) return res.sendStatus(404);
-        if(search.rows[0].returnDate!==null) return res.sendStatus(400);
-        const returned=new Date();
-        const fee=Math.floor((returned-(new Date(search.rows[0].rentDate)))/(1000*3600*24))*search.rows[0].originalPrice;
+        const search = await db.query("SELECT * FROM rentals WHERE id=$1", [id]);
+        if (search.rowCount === 0) return res.sendStatus(404);
+        if (search.rows[0].returnDate !== null) return res.sendStatus(400);
+        const returnedDay = new Date();
+        const rentedDay = new Date(search.rows[0].rentDate);
+        const fee = (returnedDay > (rentedDay + (milisInDay * search.rows[0].daysRented)) ? (returnedDay - (rentedDay + (daysRented * milisInDay)))/milisInDay * search.rows[0].pricePerDay : 0);
 
-        const updLog=await db.query(`
+        const updLog = await db.query(`
         UPDATE rentals 
         SET "returnDate"=$1, "delayFee"=$2
-        WHERE id=$3`, [returned.toISOString(), fee<0?0:fee, id]);
+        WHERE id=$3`, [returned.toISOString(), fee, id]);
 
         return res.sendStatus(200);
     } catch (error) {
@@ -84,14 +86,14 @@ export async function postReturnRentals(req, res){
     }
 }
 
-export async function deleteRentals(req, res){
-    const {id}=req.params;
-    if(id<=0) return res.sendStatus(404);
+export async function deleteRentals(req, res) {
+    const { id } = req.params;
+    if (id <= 0) return res.sendStatus(404);
     try {
-        const search=await db.query("SELECT * FROM rentals WHERE id=$1",[id]);
-        if(search.rowCount===0) return res.sendStatus(404);
-        if(search.rows[0].returnDate === null) return res.sendStatus(400);
-        const deleteLog=await db.query("DELETE FROM rentals WHERE id=$1",[id]);
+        const search = await db.query("SELECT * FROM rentals WHERE id=$1", [id]);
+        if (search.rowCount === 0) return res.sendStatus(404);
+        if (search.rows[0].returnDate === null) return res.sendStatus(400);
+        const deleteLog = await db.query("DELETE FROM rentals WHERE id=$1", [id]);
         return res.sendStatus(200);
     } catch (error) {
         console.error(error);
