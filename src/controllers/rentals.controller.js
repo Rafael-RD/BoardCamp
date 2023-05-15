@@ -77,7 +77,7 @@ export async function postReturnRentals(req, res) {
         const updLog = await db.query(`
         UPDATE rentals 
         SET "returnDate"=$1, "delayFee"=$2
-        WHERE id=$3`, [returned.toISOString(), fee, id]);
+        WHERE id=$3`, [returnedDay.toISOString(), fee, id]);
 
         return res.sendStatus(200);
     } catch (error) {
